@@ -2,10 +2,12 @@ package com.nthportal
 
 import org.scalatest.{FlatSpec, Matchers}
 
+import scala.collection.{GenSeq, SeqLike}
+import scala.collection.generic.{CanBuildFrom, GenSeqFactory, GenericTraversableTemplate, IndexedSeqFactory}
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import scala.language.implicitConversions
+import scala.language.{higherKinds, implicitConversions}
 import scala.util.Try
 
 class PackagePredefTest extends FlatSpec with Matchers {
@@ -176,6 +178,26 @@ class PackagePredefTest extends FlatSpec with Matchers {
     sm2.toSortedMap(reverseOrdering) should be theSameInstanceAs sm2
     sm2.toSeq shouldEqual Seq(3 -> 3, 2 -> 2, 1 -> 1)
     Seq(1 -> 1, 2 -> 2, 3 -> 3).toSortedMap(reverseOrdering) orderedEquals sm2 shouldBe true
+  }
+
+  it should "convert `Seq`s to an appropriate sorted `Seq`" in {
+    val elems = Seq(1, 2, 5, 4, 10, -3)
+
+    def check[S <: SeqLike[Int, S], Col[X] <: GenSeq[X] with GenericTraversableTemplate[X, Col] with SeqLike[X, Col[X]], F <: GenSeqFactory[Col]]
+    (seq: S, factory: F)(implicit bf: CanBuildFrom[S, Int, Col[Int]]): Unit = {
+      val sorted: Col[Int] = seq.toSorted[Int, Col, F](factory)
+
+      sorted should equal (seq.sorted.to[Col]: Col[Int])
+      sorted shouldEqual sorted.sorted
+    }
+
+    val list = List(elems: _*)
+    val vector = Vector(elems: _*)
+
+    val res = list.toSorted(Vector)
+
+    check(list, Vector: IndexedSeqFactory[Vector])
+    check(vector, List)
   }
 }
 

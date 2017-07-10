@@ -2,8 +2,10 @@ package com
 
 import com.nthportal.extrapredef.ExtraPredefCore
 
-import scala.collection.immutable
+import scala.collection.generic.{GenSeqFactory, GenericTraversableTemplate}
+import scala.collection.{GenSeq, SeqLike, immutable}
 import scala.concurrent.Future
+import scala.language.higherKinds
 import scala.util.Try
 
 package object nthportal extends ExtraPredefCore {
@@ -354,6 +356,49 @@ package object nthportal extends ExtraPredefCore {
           val b = immutable.SortedMap.newBuilder[K, V](ord)
           for (x <- col) b += x
           b.result()
+      }
+    }
+  }
+
+  implicit final class ExtraRichSeqLike[A, Repr](private val seq: SeqLike[A, Repr]) extends AnyVal {
+    /**
+      * Creates a sorted [[Seq]] of the specified type without creating
+      * an intermediate collection of this type, as would occur in:
+      *
+      * {{{
+      * this.sorted.to[Col]
+      * }}}
+      *
+      * @param factory the factory with which to build the resulting Seq
+      * @param ord     an [[Ordering]] with which to sort elements
+      * @tparam B   the type of elements which the Ordering can compare
+      * @tparam Col the type of the resulting collection
+      * @tparam F   the type of the Seq factory
+      * @return A sorted Seq of the type specified by the factory
+      */
+    def toSorted[B >: A, Col[X] <: GenSeq[X] with GenericTraversableTemplate[X, Col], F <: GenSeqFactory[Col]]
+    (factory: F)(implicit ord: Ordering[B]): Col[A] = {
+      val size = seq.size
+      if (size == 0) factory.empty[A]
+      else if (size == 1) (factory.newBuilder[A] += seq.head).result()
+      else {
+        val arr = Array.ofDim[AnyRef](size)
+        var i = 0
+        for (elem <- seq) {
+          arr(i) = elem.asInstanceOf[AnyRef]
+          i += 1
+        }
+
+        java.util.Arrays.sort(arr, ord.asInstanceOf[Ordering[Object]])
+
+        val b = factory.newBuilder[A]
+        b.sizeHint(size)
+        i = 0
+        while (i < size) {
+          b += arr(i).asInstanceOf[A]
+          i += 1
+        }
+        b.result()
       }
     }
   }
