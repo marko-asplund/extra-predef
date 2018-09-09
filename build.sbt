@@ -2,20 +2,14 @@ organization := "com.nthportal"
 name := "extra-predef"
 description := "An extra Predef for Scala."
 
-val rawVersion = "1.2.0"
+val rawVersion = "2.0.0"
 isSnapshot := true
 version := rawVersion + {if (isSnapshot.value) "-SNAPSHOT" else ""}
 
-scalaVersion := "2.12.3"
-
-crossScalaVersions := Seq(
-  "2.12.1",
-  "2.12.2",
-  "2.12.3"
-)
+scalaVersion := "2.13.0-M4"
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "3.0.4+" % Test
+  "org.scalatest" %% "scalatest" % "3.0.6+" % Test
 )
 
 publishTo := {
